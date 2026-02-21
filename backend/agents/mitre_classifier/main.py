@@ -1,23 +1,28 @@
 import asyncio
 import json
-from typing import Optional, Any
-from google import genai
 import re
+from typing import Optional, Any
 
+from google import genai
+
+from env_setup import GEMINI_API_KEY, logger
 from prompts import SYSTEM_PROMPT, OUTPUT_SCHEMA
-from env_setup import *
+
 
 # -------------------------
 # Gemini client setup
 # -------------------------
 if not GEMINI_API_KEY:
     raise ValueError("Missing GEMINI_API_KEY in environment variables.")
+
 client = genai.Client(api_key=GEMINI_API_KEY)
+
 
 # -------------------------
 # Utilities
 # -------------------------
 async def read_from_json(path: str) -> Optional[Any]:
+    """Read JSON data from a file."""
     logger.info(f"Reading {path}")
     try:
         with open(path, "r") as f:
@@ -27,32 +32,32 @@ async def read_from_json(path: str) -> Optional[Any]:
         return None
 
 
-# optional normalization step for logs - can add ECS / OSSEM rules here later
 async def logs_normalization(logs: Any) -> Any:
+    """
+    Optional normalization step for logs.
+    Convert timestamps to string and add ECS/OSSEM rules later if needed.
+    """
     if isinstance(logs, list):
         for event in logs:
             if "timestamp" in event:
                 event["timestamp"] = str(event["timestamp"])
-
     return logs
 
 
 def clean_llm_json(text: str) -> str:
+    """Remove code block wrappers from LLM output and strip whitespace."""
     text = text.strip()
-
-    # Remove json or  wrappers
     text = re.sub(r"^```json\s*", "", text)
     text = re.sub(r"^```\s*", "", text)
     text = re.sub(r"\s*```$", "", text)
-
     return text.strip()
 
 
 # -------------------------
 # LLM Classification
 # -------------------------
-
 async def classify_with_gemini(logs: Any, mitre_data: Any) -> Optional[dict]:
+    """Send logs and MITRE ATT&CK data to Gemini model and parse JSON response."""
     logger.info("Calling Gemini classifier")
 
     logs_str = json.dumps(logs)
@@ -93,11 +98,11 @@ async def classify_with_gemini(logs: Any, mitre_data: Any) -> Optional[dict]:
 # -------------------------
 # Workflow
 # -------------------------
-
 async def run_classification_workflow(
     honeypot_logs_path: str,
     mitre_attack_path: str
 ):
+    """Main workflow to read data, normalize, classify, and output results."""
     logger.info("Starting classification workflow")
 
     honeypot_logs = await read_from_json(honeypot_logs_path)
@@ -128,13 +133,12 @@ async def run_classification_workflow(
 # -------------------------
 # Entry Point
 # -------------------------
-
 async def runner():
     logger.info("MITRE ATT&CK classification program started")
 
     await run_classification_workflow(
-        "data/honeypot_logs.json",
-        "data/mitre_attack.json"
+        "backend/agents/data/honeypot_logs.json",
+        "backend/agents/data/mitre_attack.json"
     )
 
     logger.info("Classification workflow completed")
