@@ -1,0 +1,271 @@
+[
+    {
+        "technique_id": "T1059",
+        "technique_name": "Command and Scripting Interpreter",
+        "tactic": "Execution",
+        "severity": "high",
+        "timestamp": "2026-02-21T11:02:14Z",
+        "source_ip": "103.45.67.89",
+        "description": "Attacker executed shell commands via interactive session.",
+        "metadata": {
+            "command": "bash -i",
+            "session_id": "sess-22341"
+        },
+        "commands": ["bash -i"]
+    },
+    {
+        "technique_id": "T1078",
+        "technique_name": "Valid Accounts",
+        "tactic": "Initial Access",
+        "severity": "critical",
+        "timestamp": "2026-02-21T11:03:02Z",
+        "source_ip": "103.45.67.89",
+        "description": "Login using compromised credentials.",
+        "metadata": {
+            "username": "admin",
+            "auth_method": "ssh"
+        },
+        "commands": ["*Successful SSH login*"]
+    },
+    {
+        "technique_id": "T1082",
+        "technique_name": "System Information Discovery",
+        "tactic": "Discovery",
+        "severity": "low",
+        "timestamp": "2026-02-21T11:03:45Z",
+        "source_ip": "103.45.67.89",
+        "description": "Enumeration of OS and kernel details.",
+        "metadata": {
+            "commands": ["uname -a", "cat /etc/os-release", "hostname"]
+        },
+        "commands": ["hostname", "uname -a", "cat /etc/os-release"]
+    },
+    {
+        "technique_id": "T1018",
+        "technique_name": "Remote System Discovery",
+        "tactic": "Discovery",
+        "severity": "medium",
+        "timestamp": "2026-02-21T11:04:12Z",
+        "source_ip": "103.45.67.89",
+        "description": "Network scanning for reachable hosts.",
+        "metadata": {
+            "command": "nmap 192.168.1.0/24"
+        },
+        "commands": ["nmap 192.168.1.0/24"]
+    },
+    {
+        "technique_id": "T1046",
+        "technique_name": "Network Service Discovery",
+        "tactic": "Discovery",
+        "severity": "medium",
+        "timestamp": "2026-02-21T11:04:39Z",
+        "source_ip": "103.45.67.89",
+        "description": "Probing open ports and services.",
+        "metadata": {
+            "ports_scanned": "22,80,443"
+        },
+        "commands": []
+    },
+    {
+        "technique_id": "T1057",
+        "technique_name": "Process Discovery",
+        "tactic": "Discovery",
+        "severity": "low",
+        "timestamp": "2026-02-21T11:05:01Z",
+        "source_ip": "103.45.67.89",
+        "description": "Listing running processes.",
+        "metadata": {
+            "command": "ps aux"
+        },
+        "commands": ["ps aux"]
+    },
+    {
+        "technique_id": "T1003",
+        "technique_name": "OS Credential Dumping",
+        "tactic": "Credential Access",
+        "severity": "critical",
+        "timestamp": "2026-02-21T11:05:44Z",
+        "source_ip": "103.45.67.89",
+        "description": "Attempt to extract credentials from system memory.",
+        "metadata": {
+            "tool": "mimikatz"
+        },
+        "commands": []
+    },
+    {
+        "technique_id": "T1552",
+        "technique_name": "Unsecured Credentials",
+        "tactic": "Credential Access",
+        "severity": "high",
+        "timestamp": "2026-02-21T11:06:12Z",
+        "source_ip": "103.45.67.89",
+        "description": "Searching configuration files for secrets.",
+        "metadata": {
+            "command": "grep password /etc/*"
+        },
+        "commands": ["ls -lah /opt/hackeurope"]
+    },
+    {
+        "technique_id": "T1552.001",
+        "technique_name": "Credentials in Configuration Files",
+        "tactic": "Credential Access",
+        "severity": "high",
+        "timestamp": "2026-02-21T11:06:13Z",
+        "source_ip": "103.45.67.89",
+        "description": "Extracting secrets from configuration files.",
+        "metadata": {},
+        "commands": ["cat /opt/hackeurope/.env"]
+    },
+    {
+        "technique_id": "T1021",
+        "technique_name": "Remote Services",
+        "tactic": "Lateral Movement",
+        "severity": "high",
+        "timestamp": "2026-02-21T11:07:03Z",
+        "source_ip": "103.45.67.89",
+        "description": "Attempted pivot via SSH.",
+        "metadata": {
+            "target_ip": "192.168.1.22"
+        },
+        "commands": ["*SSH login attempts*"]
+    },
+    {
+        "technique_id": "T1105",
+        "technique_name": "Ingress Tool Transfer",
+        "tactic": "Command and Control",
+        "severity": "high",
+        "timestamp": "2026-02-21T11:07:41Z",
+        "source_ip": "103.45.67.89",
+        "description": "Downloading external payload.",
+        "metadata": {
+            "url": "http://example.com/payload.sh"
+        },
+        "commands": []
+    },
+    {
+        "technique_id": "T1053",
+        "technique_name": "Scheduled Task/Job",
+        "tactic": "Persistence",
+        "severity": "high",
+        "timestamp": "2026-02-21T11:08:22Z",
+        "source_ip": "103.45.67.89",
+        "description": "Created cron job for persistence.",
+        "metadata": {
+            "command": "crontab -e"
+        },
+        "commands": ["crontab -e"]
+    },
+    {
+        "technique_id": "T1547",
+        "technique_name": "Boot or Logon Autostart Execution",
+        "tactic": "Persistence",
+        "severity": "critical",
+        "timestamp": "2026-02-21T11:09:04Z",
+        "source_ip": "103.45.67.89",
+        "description": "Modified startup mechanisms.",
+        "metadata": {
+            "modified_file": "/etc/rc.local"
+        },
+        "commands": []
+    },
+    {
+        "technique_id": "T1562",
+        "technique_name": "Impair Defenses",
+        "tactic": "Defense Evasion",
+        "severity": "critical",
+        "timestamp": "2026-02-21T11:09:37Z",
+        "source_ip": "103.45.67.89",
+        "description": "Disabled security logging.",
+        "metadata": {
+            "command": "service auditd stop"
+        },
+        "commands": ["service auditd stop"]
+    },
+    {
+        "technique_id": "T1070",
+        "technique_name": "Indicator Removal",
+        "tactic": "Defense Evasion",
+        "severity": "high",
+        "timestamp": "2026-02-21T11:10:11Z",
+        "source_ip": "103.45.67.89",
+        "description": "Cleared shell history.",
+        "metadata": {
+            "command": "history -c"
+        },
+        "commands": ["history -c"]
+    },
+    {
+        "technique_id": "T1036",
+        "technique_name": "Masquerading",
+        "tactic": "Defense Evasion",
+        "severity": "medium",
+        "timestamp": "2026-02-21T11:10:44Z",
+        "source_ip": "103.45.67.89",
+        "description": "Renamed malicious binary.",
+        "metadata": {
+            "renamed_to": "system_update"
+        },
+        "commands": []
+    },
+    {
+        "technique_id": "T1041",
+        "technique_name": "Exfiltration Over C2 Channel",
+        "tactic": "Exfiltration",
+        "severity": "critical",
+        "timestamp": "2026-02-21T11:11:23Z",
+        "source_ip": "103.45.67.89",
+        "description": "Sensitive data transmitted via established channel.",
+        "metadata": {
+            "data_size_mb": 24
+        },
+        "commands": []
+    },
+    {
+        "technique_id": "T1486",
+        "technique_name": "Data Encrypted for Impact",
+        "tactic": "Impact",
+        "severity": "critical",
+        "timestamp": "2026-02-21T11:12:02Z",
+        "source_ip": "103.45.67.89",
+        "description": "Mass file encryption behavior detected.",
+        "metadata": {
+            "files_affected": 342
+        },
+        "commands": []
+    },
+    {
+        "technique_id": "T1490",
+        "technique_name": "Inhibit System Recovery",
+        "tactic": "Impact",
+        "severity": "critical",
+        "timestamp": "2026-02-21T11:12:31Z",
+        "source_ip": "103.45.67.89",
+        "description": "Backup deletion attempt.",
+        "metadata": {
+            "command": "rm -rf /backup/*"
+        },
+        "commands": ["rm -rf /backup/*"]
+    },
+    {
+        "technique_id": "T1098",
+        "technique_name": "Account Manipulation",
+        "tactic": "Persistence",
+        "severity": "medium",
+        "timestamp": "2026-02-21T11:13:00Z",
+        "source_ip": "103.45.67.89",
+        "description": "Attacker creating SSH directories for persistence.",
+        "metadata": {},
+        "commands": ["mkdir -p ~/.ssh"]
+    },
+    {
+        "technique_id": "T1098.004",
+        "technique_name": "SSH Authorized Keys",
+        "tactic": "Persistence",
+        "severity": "critical",
+        "timestamp": "2026-02-21T11:13:10Z",
+        "source_ip": "103.45.67.89",
+        "description": "Adding attacker's key to authorized_keys for persistence.",
+        "metadata": {},
+        "commands": ["echo ssh-rsa AAAAB3NzaFakeKey attacker@demo >> ~/.ssh/authorized_keys"]
+    }
+]
