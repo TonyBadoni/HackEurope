@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request, Body
 from fastapi.responses import StreamingResponse
 from backend.api.bus import dashboard_bus
 
-from metra_classifier.main import classify_logs, correlate_logs
+from backend.agents.mitre_classifier.main import classify_logs, correlate_logs
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
