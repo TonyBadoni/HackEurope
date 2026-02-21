@@ -3,7 +3,7 @@ import os
 import logging
 
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 
 logging.basicConfig(
     filename="classification.log",
