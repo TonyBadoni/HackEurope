@@ -13,6 +13,15 @@ services:
     networks:
       - antigravity-net
 
+  sample_service:
+    build: ./sample_service
+    container_name: sample-service
+    ports:
+      - "8080:8080"
+      - "2224:22"
+    networks:
+      - antigravity-net
+
   cowrie:
     image: cowrie/cowrie:latest
     container_name: cowrie
