@@ -17,13 +17,15 @@ jobs:
         id: gemini
         uses: google-github-actions/run-gemini-cli@v0.1.3
         with:
-          prompt: "Issue body: ${{ github.event.issue.body }}. Generate a patch. Output only a unified diff."
+          prompt: |
+            Issue body: ${{ github.event.issue.body }}. 
+            Generate a patch as a **unified diff only**. 
+            Do not include explanations or extra text.
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          gemini_model: "gemini-2.5-flash-lite"
-          
+
       - name: Save patch
         run: echo "${{ steps.gemini.outputs.summary }}" > patch.diff
-        
+
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
@@ -33,11 +35,19 @@ jobs:
         run: |
           BRANCH_NAME="auto/security-fix-${{ github.run_id }}"
           git checkout -b $BRANCH_NAME
-          git apply patch.diff || exit 1
+
+          # Check if patch can be applied cleanly
+          if git apply --check patch.diff; then
+            git apply patch.diff
+          else
+            echo "Patch cannot be applied cleanly. Aborting."
+            exit 1
+          fi
+
           git add .
           git commit -m "Auto security fix for honeypot issue #${{ github.event.issue.number }}"
           git push
-          
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
