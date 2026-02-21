@@ -9,18 +9,19 @@ import '@xyflow/react/dist/style.css';
 import './App.css';
 import HoneypotConfig from './components/HoneypotConfig';
 import Home from './components/Home';
-import RulesConfig from './components/RulesConfig';
+
+import ClassificationDashboard from './components/ClassificationDashboard';
 
 const initialNodes = [];
 const initialEdges = [];
 
 const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
-  <div
+    <div
     onClick={onClick}
     className={`flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg transition-all duration-200 mb-1 
-      ${active ? 'bg-blue-600 text-white font-medium' : 'text-zinc-400 hover:bg-zinc-900'}`}
+      ${active ? 'bg-blue-600 text-white font-medium shadow-lg shadow-blue-500/20' : 'text-zinc-400 hover:bg-zinc-900'}`}
   >
-    <Icon size={18} />
+    <Icon size={18} className={active ? 'text-white' : 'text-zinc-500'} />
     <span className="text-sm">{label}</span>
   </div>
 );
@@ -31,8 +32,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [status, setStatus] = useState('Connecting...');
 
+  /* 
   useEffect(() => {
-    const eventSource = new EventSource('http://localhost:8000/events');
+    // const eventSource = new EventSource('http://localhost:8000/events'); // Removed as endpoint does not exist
     eventSource.onopen = () => setStatus('Connected');
     eventSource.onerror = () => setStatus('Error/Finished');
 
@@ -59,6 +61,7 @@ export default function App() {
 
     return () => eventSource.close();
   }, [setNodes]);
+  */
 
   const renderContent = () => {
     switch (activeTab) {
@@ -66,20 +69,28 @@ export default function App() {
         return <Home />;
       case 'honeypot':
         return <HoneypotConfig />;
-      case 'rules':
-        return <RulesConfig />;
+
       case 'classification':
+        return (
+          <div className="w-full h-full flex flex-col">
+            <div className="px-8 py-6 border-b border-zinc-900 flex-shrink-0">
+               <h2 className="text-2xl font-bold text-white mb-1 tracking-tight">Classification Agent</h2>
+               <p className="text-zinc-400 text-sm">Real-time threat intelligence and automated rule matching</p>
+            </div>
+            <div className="flex-grow overflow-hidden">
+               <ClassificationDashboard />
+            </div>
+          </div>
+        );
       case 'fixer':
         return (
           <div className="w-full h-full flex flex-col">
             <div className="px-8 py-6 border-b border-zinc-900">
               <h2 className="text-2xl font-bold text-white mb-2">
-                {activeTab === 'classification' ? 'Classification Agent' : 'Fixer Agent'} Dashboard
+                Fixer Agent Dashboard
               </h2>
               <p className="text-zinc-400 text-sm">
-                {activeTab === 'classification' 
-                  ? 'Monitor vulnerability classification and analysis workflow' 
-                  : 'Track automated vulnerability remediation and code fixes'}
+                Track automated vulnerability remediation and code fixes
               </p>
             </div>
             <div className="flex-grow">
@@ -125,12 +136,6 @@ export default function App() {
             label="Configure Honey Pot" 
             active={activeTab === 'honeypot'} 
             onClick={() => setActiveTab('honeypot')} 
-          />
-          <SidebarItem 
-            icon={FileSliders} 
-            label="Configure Rules" 
-            active={activeTab === 'rules'} 
-            onClick={() => setActiveTab('rules')} 
           />
           <SidebarItem 
             icon={Shield} 

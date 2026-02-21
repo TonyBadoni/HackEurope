@@ -85,3 +85,17 @@ langgraph
 python-dotenv
 pydantic
 google-generativeai
+lucide-react
+ls-core
+httpx
+aiofiles
+jinja2
+python-multipart
+re
+pathlib
+asyncio
+json
+logging
+random
+datetime
+typing
