@@ -1,24 +1,54 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on honeypot-made issues
   issues:
     types: [opened, labeled]
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "fix"
   fix:
-    if: |
-      contains(github.event.issue.labels.*.name, 'honeypot')
+    if: contains(github.event.issue.labels.*.name, 'honeypot')
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Run fixer agent
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Run Gemini
+        id: gemini
+        uses: google-github-actions/run-gemini-cli@v0.1.3
+        with:
+          prompt: "Issue body: ${{ github.event.issue.body }}. Generate a patch. Output only a unified diff."
+      
+      - name: Save patch
+        run: echo "${{ steps.gemini.outputs.summary }}" > patch.diff
+        
+      - name: Configure Git
         run: |
-          python auto_fix.py "${{ github.event.issue.body }}"    # The type of runner that the job will run on
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create branch and apply patch
+        run: |
+          BRANCH_NAME="auto/security-fix-${{ github.run_id }}"
+          git checkout -b $BRANCH_NAME
+          git apply patch.diff || exit 1
+          git add .
+          git commit -m "Auto security fix for honeypot issue #${{ github.event.issue.number }}"
+
+      - name: Push branch
+        uses: ad-m/github-push-action@v0.6
+        with:
+          branch: auto/security-fix-${{ github.run_id }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Auto Security Fix: Honeypot Issue #${{ github.event.issue.number }}"
+          body: |
+            This PR was automatically generated to mitigate the honeypot attack:
+            ${{ github.event.issue.body }}
+          base: main
+          head: auto/security-fix-${{ github.run_id }}
+          draft: true
