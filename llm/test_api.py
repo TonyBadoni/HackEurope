@@ -9,7 +9,7 @@ from llm.api_call import get_llm_response
 def test_gemini_api():
     print("Testing Gemini API connection...")
     try:
-        response = get_llm_response("Hello! Please respond with 'API Connection Successful' if you can read this.")
+        response = get_llm_response("Hello! How is your day today.")
         print("-" * 30)
         print(f"Response: {response}")
         print("-" * 30)

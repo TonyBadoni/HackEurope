@@ -4,11 +4,12 @@ import {
   useNodesState,
   useEdgesState,
 } from '@xyflow/react';
-import { Settings, Shield, Wrench, Activity, Home as HomeIcon } from 'lucide-react';
+import { Settings, Shield, Wrench, Activity, Home as HomeIcon, FileSliders, Terminal } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 import './App.css';
 import HoneypotConfig from './components/HoneypotConfig';
 import Home from './components/Home';
+import RulesConfig from './components/RulesConfig';
 
 const initialNodes = [];
 const initialEdges = [];
@@ -27,8 +28,8 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
 export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [status, setStatus] = useState('Disconnected');
   const [activeTab, setActiveTab] = useState('home');
+  const [status, setStatus] = useState('Connecting...');
 
   useEffect(() => {
     const eventSource = new EventSource('http://localhost:8000/events');
@@ -59,28 +60,77 @@ export default function App() {
     return () => eventSource.close();
   }, [setNodes]);
 
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'home':
+        return <Home />;
+      case 'honeypot':
+        return <HoneypotConfig />;
+      case 'rules':
+        return <RulesConfig />;
+      case 'classification':
+      case 'fixer':
+        return (
+          <div className="w-full h-full flex flex-col">
+            <div className="px-8 py-6 border-b border-zinc-900">
+              <h2 className="text-2xl font-bold text-white mb-2">
+                {activeTab === 'classification' ? 'Classification Agent' : 'Fixer Agent'} Dashboard
+              </h2>
+              <p className="text-zinc-400 text-sm">
+                {activeTab === 'classification' 
+                  ? 'Monitor vulnerability classification and analysis workflow' 
+                  : 'Track automated vulnerability remediation and code fixes'}
+              </p>
+            </div>
+            <div className="flex-grow">
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                nodesDraggable={false}
+                fitView
+              />
+            </div>
+          </div>
+        );
+      default:
+        return <Home />;
+    }
+  };
+
   return (
-    <div className="w-screen h-screen flex bg-black text-zinc-100 font-sans">
+    <div className="flex h-screen bg-black text-zinc-300 font-sans selection:bg-blue-500/30">
       {/* Sidebar */}
-      <aside className="w-[260px] border-r border-zinc-900 flex flex-col bg-zinc-950 p-6">
-        <div className="flex items-center gap-2 mb-8 pl-2">
-          <Activity size={24} className="text-blue-500" />
-          <h1 className="text-lg font-semibold m-0">Agent Pipeline</h1>
+      <aside className="w-72 bg-zinc-950 border-r border-zinc-900 flex flex-col shadow-2xl z-10 flex-shrink-0">
+        <div className="p-8">
+          <div className="flex items-center gap-3 group">
+            <div className="p-2 bg-blue-600 rounded-lg group-hover:scale-110 transition-transform duration-300">
+              <Terminal className="text-white" size={20} />
+            </div>
+            <h1 className="text-xl font-black text-white tracking-tighter italic">ANTIGRAVITY</h1>
+          </div>
         </div>
 
-        <nav className="flex flex-col">
+        <nav className="flex-1 px-4 space-y-2">
           <SidebarItem 
             icon={HomeIcon} 
             label="Home" 
             active={activeTab === 'home'} 
             onClick={() => setActiveTab('home')} 
           />
-          <div className="my-4 border-t border-zinc-900/50 mx-2" />
+          <div className="my-6 border-t-2 border-zinc-800 mx-4 opacity-50" />
           <SidebarItem 
             icon={Settings} 
             label="Configure Honey Pot" 
             active={activeTab === 'honeypot'} 
             onClick={() => setActiveTab('honeypot')} 
+          />
+          <SidebarItem 
+            icon={FileSliders} 
+            label="Configure Rules" 
+            active={activeTab === 'rules'} 
+            onClick={() => setActiveTab('rules')} 
           />
           <SidebarItem 
             icon={Shield} 
@@ -98,8 +148,8 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-grow flex flex-col overflow-hidden">
-        <header className="px-6 py-4 bg-zinc-950 border-b border-zinc-900 flex justify-between items-center">
+      <main className="flex-grow flex flex-col overflow-hidden min-w-0">
+        <header className="px-6 py-4 bg-zinc-950 border-b border-zinc-900 flex justify-between items-center flex-shrink-0">
           <span className="text-sm text-zinc-400">
             Current View: <strong className="text-white capitalize">{activeTab.replace('_', ' ')}</strong>
           </span>
@@ -110,22 +160,7 @@ export default function App() {
         </header>
         
         <div className="flex-grow overflow-auto bg-zinc-950/20">
-          {activeTab === 'home' ? (
-            <Home />
-          ) : activeTab === 'honeypot' ? (
-            <HoneypotConfig />
-          ) : (
-            <div className="w-full h-full">
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                nodesDraggable={false}
-                fitView
-              />
-            </div>
-          )}
+          {renderContent()}
         </div>
       </main>
     </div>

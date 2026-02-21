@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  wazuh-manager:
+    image: wazuh/wazuh:latest
+    container_name: wazuh-manager
+    hostname: wazuh-manager
+    ports:
+      - "1514:1514/udp"  # for agent logs
+      - "1515:1515"      # for agent registration
+      - "55000:55000"    # for Wazuh API
+    environment:
+      - TZ=UTC
+    volumes:
+      - ./wazuh-rules:/var/ossec/etc/rules
+      - ./wazuh-logs:/var/ossec/logs
+    networks:
+      - antigravity-net
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    networks:
+      - antigravity-net
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - antigravity-net
+
+  backend:
+    build: .
+    container_name: antigravity-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./wazuh-rules:/app/wazuh-rules
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    depends_on:
+      - wazuh-manager
+    networks:
+      - antigravity-net
+
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: cowrie
+    ports:
+      - "2222:2222"
+      - "2223:2223"
+    volumes:
+      - ./cowrie-log:/cowrie/cowrie-git/var/log/cowrie
+    networks:
+      - antigravity-net
+
+networks:
+  antigravity-net:
+    driver: bridge

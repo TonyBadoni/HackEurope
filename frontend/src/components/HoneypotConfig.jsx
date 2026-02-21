@@ -1,19 +1,35 @@
 import React, { useState } from 'react';
-import { Github, Link, ArrowRight, ShieldCheck, Server, Code, ShieldAlert, Cpu, Share2, Globe, Activity } from 'lucide-react';
+import { Github, Link, ArrowRight, ShieldCheck, Server, Code, ShieldAlert, Cpu, Share2, Globe, Activity, ChevronDown } from 'lucide-react';
 
-const ConfigSection = ({ icon: Icon, title, children }) => (
-  <div className="space-y-4 pt-6 first:pt-0 border-t border-zinc-900 first:border-0">
-    <div className="flex items-center gap-3">
-      <div className="p-2 bg-zinc-900 rounded-lg">
-        <Icon size={18} className="text-blue-500" />
+const ConfigSection = ({ icon: Icon, title, children, defaultOpen = true }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="pt-6 first:pt-0 border-t border-zinc-900 first:border-0 group">
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between cursor-pointer hover:bg-zinc-900/30 p-2 -m-2 rounded-xl transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-zinc-900 rounded-lg group-hover:bg-zinc-800 transition-colors">
+            <Icon size={18} className="text-blue-500" />
+          </div>
+          <h3 className="text-md font-bold text-white tracking-wide">{title}</h3>
+        </div>
+        <ChevronDown 
+          size={18} 
+          className={`text-zinc-600 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
+        />
       </div>
-      <h3 className="text-md font-bold text-white">{title}</h3>
+      
+      {isOpen && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-1 mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+          {children}
+        </div>
+      )}
     </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-1">
-      {children}
-    </div>
-  </div>
-);
+  );
+};
 
 const FormField = ({ label, id, placeholder, type = "text", value, onChange, required = false }) => (
   <div className="space-y-1.5">
@@ -32,21 +48,48 @@ const FormField = ({ label, id, placeholder, type = "text", value, onChange, req
   </div>
 );
 
-const SelectField = ({ label, id, options, value, onChange }) => (
-  <div className="space-y-1.5">
-    <label htmlFor={id} className="text-[13px] font-medium text-zinc-400 ml-0.5">
-      {label}
-    </label>
-    <select
-      id={id}
-      className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none appearance-none"
-      value={value}
-      onChange={onChange}
-    >
-      {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-    </select>
-  </div>
-);
+const DropdownField = ({ label, id, options, value, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedOption = options.find(opt => opt.value === value) || options[0];
+
+  return (
+    <div className="space-y-1.5 relative">
+      <label className="text-[13px] font-medium text-zinc-400 ml-0.5">
+        {label}
+      </label>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer flex justify-between items-center hover:bg-zinc-900/50"
+      >
+        <span className={value ? "text-white" : "text-zinc-500"}>
+          {selectedOption.label}
+        </span>
+        <ChevronDown size={14} className={`text-zinc-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+          <div className="absolute z-20 w-full mt-2 py-2 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl max-h-60 overflow-auto">
+            {options.map((opt) => (
+              <div
+                key={opt.value}
+                onClick={() => {
+                  onChange({ target: { value: opt.value } });
+                  setIsOpen(false);
+                }}
+                className={`px-4 py-2.5 text-sm cursor-pointer hover:bg-blue-600 hover:text-white transition-colors
+                  ${value === opt.value ? 'bg-blue-600/10 text-blue-400' : 'text-zinc-400'}`}
+              >
+                {opt.label}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 export default function HoneypotConfig() {
   const [formData, setFormData] = useState({
@@ -111,7 +154,7 @@ export default function HoneypotConfig() {
 
             {/* Infrastructure & Environment */}
             <ConfigSection icon={Server} title="Infrastructure & Environment">
-              <SelectField 
+              <DropdownField 
                 label="Server Type" 
                 id="serverType" 
                 options={[
@@ -123,32 +166,50 @@ export default function HoneypotConfig() {
                 value={formData.serverType}
                 onChange={(e) => updateField('serverType', e.target.value)}
               />
-              <FormField 
+              <DropdownField 
                 label="Operating System" 
                 id="os" 
-                placeholder="e.g. Ubuntu 22.04" 
+                options={[
+                  { label: 'Ubuntu 22.04 LTS', value: 'ubuntu-22.04' },
+                  { label: 'Ubuntu 24.04 LTS', value: 'ubuntu-24.04' },
+                  { label: 'Debian 12', value: 'debian-12' },
+                  { label: 'CentOS Stream 9', value: 'centos-9' },
+                  { label: 'Windows Server 2022', value: 'win-2022' }
+                ]}
                 value={formData.os}
                 onChange={(e) => updateField('os', e.target.value)}
               />
-              <FormField 
+              <DropdownField 
                 label="Technology Stack" 
                 id="techStack" 
-                placeholder="e.g. Node.js, Python/Django" 
+                options={[
+                  { label: 'Node.js (Express/Nest)', value: 'nodejs' },
+                  { label: 'Python (FastAPI/Django)', value: 'python' },
+                  { label: 'Java (Spring Boot)', value: 'java' },
+                  { label: 'Go (Fiber/Echo)', value: 'go' },
+                  { label: 'Ruby on Rails', value: 'ruby' },
+                  { label: 'PHP (Laravel)', value: 'php' }
+                ]}
                 value={formData.techStack}
                 onChange={(e) => updateField('techStack', e.target.value)}
               />
-              <FormField 
-                label="Open Ports" 
+              <DropdownField 
+                label="Exposure Level (Ports)" 
                 id="ports" 
-                placeholder="e.g. 2222, 8080" 
+                options={[
+                  { label: 'Standard (80, 443)', value: '80, 443' },
+                  { label: 'SSH Focus (22, 2222)', value: '22, 2222' },
+                  { label: 'Full Suite (22, 80, 443, 3306, 5432)', value: '22, 80, 443, 3306, 5432' },
+                  { label: 'Custom/Legacy (8080, 8443)', value: '8080, 8443' }
+                ]}
                 value={formData.ports}
                 onChange={(e) => updateField('ports', e.target.value)}
               />
             </ConfigSection>
 
             {/* Application Details */}
-            <ConfigSection icon={Code} title="Application Details">
-              <SelectField 
+            <ConfigSection icon={Code} title="Application Details" defaultOpen={false}>
+              <DropdownField 
                 label="Database Type" 
                 id="dbType" 
                 options={[
@@ -160,21 +221,27 @@ export default function HoneypotConfig() {
                 value={formData.dbType}
                 onChange={(e) => updateField('dbType', e.target.value)}
               />
-              <FormField 
-                label="API Endpoints to Simulate" 
+              <DropdownField 
+                label="API Surface Area" 
                 id="endpoints" 
-                placeholder="e.g. /api/v1/auth, /api/v1/users" 
+                options={[
+                  { label: 'Minimal (Auth only)', value: '/api/login' },
+                  { label: 'Standard CRUD', value: '/api/v1/users, /api/v1/posts' },
+                  { label: 'Full API Suite', value: '/api/v1/*' },
+                  { label: 'GraphQL Endpoint', value: '/graphql' }
+                ]}
                 value={formData.endpoints}
                 onChange={(e) => updateField('endpoints', e.target.value)}
               />
-              <SelectField 
+              <DropdownField 
                 label="Authentication Method" 
                 id="authMethod" 
                 options={[
-                  { label: 'JWT', value: 'jwt' },
-                  { label: 'OAuth 2.0', value: 'oauth' },
-                  { label: 'Session-based', value: 'session' },
-                  { label: 'API Keys', value: 'apikey' }
+                  { label: 'JWT (JSON Web Tokens)', value: 'jwt' },
+                  { label: 'OAuth 2.0 / OpenID', value: 'oauth' },
+                  { label: 'Session Cookies', value: 'session' },
+                  { label: 'API Keys', value: 'apikey' },
+                  { label: 'Basic Auth', value: 'basic' }
                 ]}
                 value={formData.authMethod}
                 onChange={(e) => updateField('authMethod', e.target.value)}
@@ -182,22 +249,28 @@ export default function HoneypotConfig() {
             </ConfigSection>
 
             {/* Security & Monitoring */}
-            <ConfigSection icon={ShieldAlert} title="Security & Monitoring">
-              <FormField 
-                label="Intentional Vulnerabilities" 
+            <ConfigSection icon={ShieldAlert} title="Security & Monitoring" defaultOpen={false}>
+              <DropdownField 
+                label="Seeded Vulnerabilities" 
                 id="vulns" 
-                placeholder="e.g. SQLi, XSS, RCE" 
+                options={[
+                  { label: 'Injection (SQLi, NoSQLi)', value: 'injection' },
+                  { label: 'Broken Auth / Session Fixation', value: 'auth' },
+                  { label: 'Sensitive Data Exposure', value: 'data' },
+                  { label: 'Cross-Site Scripting (XSS)', value: 'xss' },
+                  { label: 'Full OWASP Top 10 Suite', value: 'owasp-all' }
+                ]}
                 value={formData.vulns}
                 onChange={(e) => updateField('vulns', e.target.value)}
               />
-              <SelectField 
+              <DropdownField 
                 label="Logging Level" 
                 id="logLevel" 
                 options={[
-                  { label: 'Debug', value: 'debug' },
-                  { label: 'Info', value: 'info' },
-                  { label: 'Warning', value: 'warn' },
-                  { label: 'Critical', value: 'critical' }
+                  { label: 'Debug (Verbose)', value: 'debug' },
+                  { label: 'Info (Standard)', value: 'info' },
+                  { label: 'Warning (Focus on anomalies)', value: 'warn' },
+                  { label: 'Critical (Only active breaches)', value: 'critical' }
                 ]}
                 value={formData.logLevel}
                 onChange={(e) => updateField('logLevel', e.target.value)}
@@ -205,18 +278,28 @@ export default function HoneypotConfig() {
             </ConfigSection>
 
             {/* Traffic & Deployment */}
-            <ConfigSection icon={Activity} title="Traffic & Deployment">
-              <FormField 
-                label="Expected Request Rate (req/min)" 
+            <ConfigSection icon={Activity} title="Traffic & Deployment" defaultOpen={false}>
+              <DropdownField 
+                label="Traffic Magnitude (req/min)" 
                 id="requestRate" 
-                placeholder="e.g. 500" 
+                options={[
+                  { label: 'Low (1-50)', value: '50' },
+                  { label: 'Medium (50-500)', value: '500' },
+                  { label: 'High (500-2000)', value: '2000' },
+                  { label: 'Stress Test (5000+)', value: '5000' }
+                ]}
                 value={formData.requestRate}
                 onChange={(e) => updateField('requestRate', e.target.value)}
               />
-              <FormField 
-                label="Geographic Distribution" 
+              <DropdownField 
+                label="Geographic Targeting" 
                 id="geoDistribution" 
-                placeholder="e.g. US, EU, Global" 
+                options={[
+                  { label: 'Global (Randomized)', value: 'global' },
+                  { label: 'North America Focus', value: 'na' },
+                  { label: 'Europe Focus', value: 'eu' },
+                  { label: 'Asia/Pacific Focus', value: 'asia' }
+                ]}
                 value={formData.geoDistribution}
                 onChange={(e) => updateField('geoDistribution', e.target.value)}
               />
