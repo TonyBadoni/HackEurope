@@ -9,7 +9,7 @@ import '@xyflow/react/dist/style.css';
 import './App.css';
 import HoneypotConfig from './components/HoneypotConfig';
 import Home from './components/Home';
-import RulesConfig from './components/RulesConfig';
+
 import ClassificationDashboard from './components/ClassificationDashboard';
 
 const initialNodes = [];
@@ -69,8 +69,7 @@ export default function App() {
         return <Home />;
       case 'honeypot':
         return <HoneypotConfig />;
-      case 'rules':
-        return <RulesConfig />;
+
       case 'classification':
         return (
           <div className="w-full h-full flex flex-col">
@@ -137,12 +136,6 @@ export default function App() {
             label="Configure Honey Pot" 
             active={activeTab === 'honeypot'} 
             onClick={() => setActiveTab('honeypot')} 
-          />
-          <SidebarItem 
-            icon={FileSliders} 
-            label="Configure Rules" 
-            active={activeTab === 'rules'} 
-            onClick={() => setActiveTab('rules')} 
           />
           <SidebarItem 
             icon={Shield} 

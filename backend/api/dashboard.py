@@ -1,32 +1,14 @@
-"""
-dashboard.py  –  SSE endpoints for the Classification Agent dashboard.
-
-Endpoints
----------
-GET /dashboard/live-logs        Panel 1 – raw Cowrie JSON events as they arrive
-GET /dashboard/rejected-logs    Panel 2 – events blocked by a Wazuh rule (with rule info)
-GET /dashboard/risk-scores      Panel 3 – events annotated with a risk score
-GET /dashboard/attack-chains    Panel 4 – correlated multi-step attack sequences
-"""
-
-from __future__ import annotations
-
-import asyncio
-import json
 import logging
 import random
+import json
+import asyncio
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import AsyncGenerator
-
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from backend.wazuh_rules.rule_matcher import match_cowrie_event
-
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
-
 
 # ── demo data pools ────────────────────────────────────────────────────────────
 
@@ -89,12 +71,10 @@ _ATTACK_CHAINS = [
     },
 ]
 
-
 # ── helpers ────────────────────────────────────────────────────────────────────
 
 def _now() -> str:
     return datetime.now(tz=timezone.utc).strftime("%H:%M:%S")
-
 
 def _make_event(base: dict) -> dict:
     e = {**base}
@@ -105,58 +85,24 @@ def _make_event(base: dict) -> dict:
     e["timestamp"] = _now()
     return e
 
-
 def _sse(payload: dict) -> str:
     return f"data: {json.dumps(payload)}\n\n"
 
-
 async def _guard(request: Request) -> bool:
-    """Return True when the client has disconnected."""
     return await request.is_disconnected()
-
 
 # ── endpoint 1: live logs ──────────────────────────────────────────────────────
 
 @router.get("/live-logs")
 async def stream_live_logs(request: Request):
-    """All Cowrie JSON events as they 'arrive'."""
-
     async def gen() -> AsyncGenerator[str, None]:
         while not await _guard(request):
             event = _make_event(random.choice(_COWRIE_EVENTS))
             yield _sse({"type": "live_log", **event})
             await asyncio.sleep(random.uniform(0.8, 2.5))
-
     return StreamingResponse(gen(), media_type="text/event-stream")
 
-
-# ── endpoint 2: rejected logs ──────────────────────────────────────────────────
-
-_RULES_DIR = Path(__file__).parent.parent.parent / "wazuh-rules"
-
-
-@router.get("/rejected-logs")
-async def stream_rejected_logs(request: Request):
-    """Events that matched a Wazuh rule (i.e. were 'rejected'/flagged)."""
-
-    async def gen() -> AsyncGenerator[str, None]:
-        while not await _guard(request):
-            event = _make_event(random.choice(_COWRIE_EVENTS))
-            match = match_cowrie_event(event, rules_dir=_RULES_DIR)
-            if match:
-                yield _sse({
-                    "type":        "rejected_log",
-                    "event":       event,
-                    "rule_id":     match["rule_id"],
-                    "description": match["description"],
-                    "timestamp":   _now(),
-                })
-            await asyncio.sleep(random.uniform(1.5, 4.0))
-
-    return StreamingResponse(gen(), media_type="text/event-stream")
-
-
-# ── endpoint 3: risk scores ────────────────────────────────────────────────────
+# ── endpoint 2: risk scores ────────────────────────────────────────────────────
 
 _RISK_MAP: dict[str, int] = {
     "cowrie.session.connect":        10,
@@ -175,18 +121,14 @@ _RISK_LABEL = {
     range(80, 101): ("Critical", "#ef4444"),
 }
 
-
 def _risk_label(score: int) -> tuple[str, str]:
     for r, (label, colour) in _RISK_LABEL.items():
         if score in r:
             return label, colour
     return "Unknown", "#6b7280"
 
-
 @router.get("/risk-scores")
 async def stream_risk_scores(request: Request):
-    """Events annotated with a risk score and severity label."""
-
     async def gen() -> AsyncGenerator[str, None]:
         while not await _guard(request):
             event = _make_event(random.choice(_COWRIE_EVENTS))
@@ -205,20 +147,15 @@ async def stream_risk_scores(request: Request):
                 "session":   event["session"],
             })
             await asyncio.sleep(random.uniform(1.0, 3.0))
-
     return StreamingResponse(gen(), media_type="text/event-stream")
 
-
-# ── endpoint 4: multi-step attack chains ───────────────────────────────────────
+# ── endpoint 3: multi-step attack chains ───────────────────────────────────────
 
 @router.get("/attack-chains")
 async def stream_attack_chains(request: Request):
-    """Correlated multi-step attack sequences."""
-
     async def gen() -> AsyncGenerator[str, None]:
         while not await _guard(request):
             chain = random.choice(_ATTACK_CHAINS)
             yield _sse({"type": "attack_chain", **chain, "detected_at": _now()})
             await asyncio.sleep(random.uniform(6.0, 12.0))
-
     return StreamingResponse(gen(), media_type="text/event-stream")

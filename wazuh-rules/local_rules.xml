@@ -1,9 +1,0 @@
-<group name="local,">
-  <rule id="100004" level="8">
-    <if_matched_sid>100003</if_matched_sid>
-    <same_source_ip />
-    <same_user />
-    <options count="5" interval="600" />
-    <description>Multiple invalid login attempts from the same IP address and user within 10 minutes.</description>
-  </rule>
-</group>

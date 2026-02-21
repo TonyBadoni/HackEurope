@@ -1,23 +1,6 @@
 version: '3.8'
 
 services:
-  wazuh-manager:
-    image: wazuh/wazuh-manager:4.7.3
-    container_name: wazuh-manager
-    hostname: wazuh-manager
-    ports:
-      - "1514:1514/udp"  # for agent logs
-      - "1515:1515"      # for agent registration
-      - "55000:55000"    # for Wazuh API
-    environment:
-      - TZ=UTC
-    volumes:
-      - ./wazuh-rules:/var/ossec/etc/rules
-      - ./wazuh-logs:/var/ossec/logs
-    networks:
-      - antigravity-net
-
-
   backend:
     build: .
     container_name: antigravity-backend
@@ -25,7 +8,6 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-      - ./wazuh-rules:/app/wazuh-rules
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
     networks:

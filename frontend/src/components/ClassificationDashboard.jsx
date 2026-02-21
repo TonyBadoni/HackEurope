@@ -1,17 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Activity, 
-  ShieldAlert, 
   Zap, 
   Layers, 
-  Terminal, 
-  AlertTriangle, 
   ChevronRight,
   Wifi,
   Radio,
-  Target,
   Search,
-  Scan,
   Database,
   Cpu
 } from 'lucide-react';
@@ -56,33 +51,6 @@ const LogItem = ({ data }) => (
         <ChevronRight size={12} className="opacity-0 group-hover/item:opacity-100 transition-opacity text-blue-500" />
       </div>
     )}
-  </div>
-);
-
-const RejectedItem = ({ data }) => (
-  <div className="mb-3 p-4 bg-red-500/5 border border-red-500/10 rounded-xl relative overflow-hidden group/alert hover:bg-red-500/10 hover:border-red-500/30 transition-all duration-300">
-    <div className="absolute top-0 left-0 w-1 h-full bg-red-500/20 group-hover/alert:bg-red-500/50 transition-colors" />
-    <div className="flex justify-between items-start mb-2">
-      <div className="flex items-center gap-2">
-        <ShieldAlert size={14} className="text-red-500 animate-pulse" />
-        <div>
-          <span className="text-[9px] font-black uppercase text-red-500/80 tracking-widest block mb-0.5">Alert Triggered</span>
-          <h4 className="text-xs font-bold text-white uppercase group-hover/alert:text-red-400 transition-colors">{data?.rule_id}</h4>
-        </div>
-      </div>
-      <span className="text-[10px] text-zinc-600 font-mono">[{data?.timestamp}]</span>
-    </div>
-    <p className="text-xs text-zinc-400 leading-relaxed mb-3 group-hover/alert:text-zinc-200 transition-colors">{data?.description}</p>
-    <div className="flex flex-wrap gap-2 text-[10px] font-mono">
-      <span className="bg-black/60 px-2 py-0.5 rounded text-zinc-500 group-hover/alert:text-zinc-400 capitalize flex items-center gap-1">
-        <Scan size={10} />
-        {data?.event?.eventid?.split('.').pop() || 'unknown'}
-      </span>
-      <span className="bg-black/60 px-2 py-0.5 rounded text-zinc-500 group-hover/alert:text-zinc-400 flex items-center gap-1">
-        <Target size={10} />
-        {data?.event?.src_ip}
-      </span>
-    </div>
   </div>
 );
 
@@ -190,7 +158,6 @@ const AttackChainItem = ({ data }) => (
 
 export default function ClassificationDashboard() {
   const [liveLogs, setLiveLogs] = useState([]);
-  const [rejectedLogs, setRejectedLogs] = useState([]);
   const [riskScores, setRiskScores] = useState([]);
   const [attackChains, setAttackChains] = useState([]);
 
@@ -199,7 +166,6 @@ export default function ClassificationDashboard() {
   useEffect(() => {
     const endpoints = [
       { url: '/api/v1/dashboard/live-logs', setter: setLiveLogs, limit: 20 },
-      { url: '/api/v1/dashboard/rejected-logs', setter: setRejectedLogs, limit: 10 },
       { url: '/api/v1/dashboard/risk-scores', setter: setRiskScores, limit: 15 },
       { url: '/api/v1/dashboard/attack-chains', setter: setAttackChains, limit: 5 }
     ];
@@ -236,7 +202,7 @@ export default function ClassificationDashboard() {
   }, []);
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 grid-rows-2 gap-5 h-full p-6 animate-in fade-in duration-1000 slide-in-from-bottom-2">
+    <div className="grid grid-cols-1 xl:grid-cols-2 grid-rows-2 gap-6 h-full p-6 animate-in fade-in duration-1000 slide-in-from-bottom-2">
       <Panel title="Real-time Feed" icon={Cpu} color="bg-blue-600" glowColor="bg-blue-500">
         {liveLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-zinc-500 italic text-[10px] gap-4 tracking-widest uppercase font-black">
@@ -245,17 +211,6 @@ export default function ClassificationDashboard() {
           </div>
         ) : (
           liveLogs.map((log, i) => <LogItem key={i} data={log} />)
-        )}
-      </Panel>
-
-      <Panel title="Rule Violations" icon={ShieldAlert} color="bg-red-600" glowColor="bg-red-500">
-        {rejectedLogs.length === 0 ? (
-           <div className="flex flex-col items-center justify-center h-full text-zinc-500 italic text-[10px] gap-4 tracking-widest uppercase font-black">
-             <Scan className="text-red-500" size={32} />
-             Scanning for Threats...
-           </div>
-        ) : (
-          rejectedLogs.map((log, i) => <RejectedItem key={i} data={log} />)
         )}
       </Panel>
 
@@ -270,16 +225,18 @@ export default function ClassificationDashboard() {
         )}
       </Panel>
 
-      <Panel title="Attack Correlation" icon={Database} color="bg-emerald-600" glowColor="bg-emerald-500">
-        {attackChains.length === 0 ? (
-           <div className="flex flex-col items-center justify-center h-full text-zinc-500 italic text-[10px] gap-4 tracking-widest uppercase font-black">
-             <Layers className="text-emerald-500" size={32} />
-             Connecting Nodes...
-           </div>
-        ) : (
-          attackChains.map((chain, i) => <AttackChainItem key={i} data={chain} />)
-        )}
-      </Panel>
+      <div className="xl:col-span-2">
+        <Panel title="Attack Correlation" icon={Database} color="bg-emerald-600" glowColor="bg-emerald-500">
+          {attackChains.length === 0 ? (
+             <div className="flex flex-col items-center justify-center h-full text-zinc-500 italic text-[10px] gap-4 tracking-widest uppercase font-black">
+               <Layers className="text-emerald-500" size={32} />
+               Connecting Nodes...
+             </div>
+          ) : (
+            attackChains.map((chain, i) => <AttackChainItem key={i} data={chain} />)
+          )}
+        </Panel>
+      </div>
     </div>
   );
 }
