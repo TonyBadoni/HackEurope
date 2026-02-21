@@ -29,11 +29,13 @@ jobs:
             +This is a test file.
             +It was created by an automated patch.
             +Hello World!
-            
+            EOF
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
 
       - name: Save patch
-        run: echo "${{ steps.gemini.outputs.summary }}" > patch.diff
+        run: |
+          echo "${{ steps.gemini.outputs.summary }}" > patch.diff
+          cat <<'EOF' > patch.diff
 
       - name: Configure Git
         run: |
