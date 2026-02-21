@@ -1,1 +1,0 @@
-# Rules functionality removed.
