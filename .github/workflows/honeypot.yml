@@ -20,7 +20,7 @@ jobs:
           prompt: |
             Issue body: ${{ github.event.issue.body }}. 
             Generate a patch as a **unified diff only**. 
-            Do not include explanations or extra text.
+            Do not include **any** extra text.
 
             example valid patch creating a test.txt file: 
             --- /dev/null
@@ -29,13 +29,12 @@ jobs:
             +This is a test file.
             +It was created by an automated patch.
             +Hello World!
-            EOF
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
 
       - name: Save patch
         run: |
           echo "${{ steps.gemini.outputs.summary }}" > patch.diff
-          cat <<'EOF' > patch.diff
+          cat << 'EOF' > patch.diff
 
       - name: Configure Git
         run: |
