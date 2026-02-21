@@ -211,3 +211,9 @@ __marimo__/
 
 # examples
 ./data/honeypot_logs.json
+=======
+# gemini-cli settings
+.gemini/
+
+# GitHub App credentials
+gha-creds-*.json

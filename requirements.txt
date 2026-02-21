@@ -79,3 +79,11 @@ websocket-client==1.7.0
 wheel==0.42.0
 xdg==5
 xkit==0.0.0
+=======
+fastapi
+uvicorn
+langchain-google-genai
+langgraph
+python-dotenv
+pydantic
+google-generativeai
