@@ -30,6 +30,10 @@ jobs:
             +It was created by an automated patch.
             +Hello World!
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          settings: |
+            {
+              "coreTools": ["read_file", "write_file", "list_directory", "run_shell_command"]
+            }
 
       - name: Save patch
         run: echo "${{ steps.gemini.outputs.summary }}" > patch.diff
